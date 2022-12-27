@@ -1,8 +1,12 @@
 -- My init file
--- Install packer
+
+-- disable netrw at the very start of your init.lua (strongly advised)
+vim.g.loaded_netrw = 1
+vim.g.loaded_netrwPlugin = 1
+
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
-vim.o.guifont = 'Cascadia Code PL:h11'
+vim.o.guifont = 'JetBrainsMono NFM:h11'
 vim.o.tabstop = 2
 vim.o.shiftwidth = 2
 vim.o.number = true
@@ -15,6 +19,14 @@ require('packer').startup({ function(use)
 	use 'folke/tokyonight.nvim'
 
 	use 'Pocco81/auto-save.nvim'
+
+	use {
+		'nvim-tree/nvim-tree.lua',
+		requires = {
+			'nvim-tree/nvim-web-devicons', -- optional, for file icons
+		},
+		tag = 'nightly' -- optional, updated every week. (see issue #1193)
+	}
 
 	use {
 		'nvim-treesitter/nvim-treesitter',
@@ -33,11 +45,11 @@ require('packer').startup({ function(use)
 			'williamboman/mason-lspconfig.nvim',
 
 			-- Useful status updates for LSP
-			--'j-hui/fidget.nvim',
+			'j-hui/fidget.nvim',
 
 			-- Additional lua configuration, makes nvim stuff amazing
 			'folke/neodev.nvim',
-		},
+		}
 	}
 
 	-- Completion
@@ -63,6 +75,7 @@ vim.cmd.colorscheme('tokyonight')
 
 require('auto-save').setup {}
 
+require('nvim-tree').setup()
 
 require 'nvim-treesitter.configs'.setup {
 	-- A list of parser names, or "all"
@@ -84,16 +97,6 @@ require 'nvim-treesitter.configs'.setup {
 	highlight = {
 		-- `false` will disable the whole extension
 		enable = true,
-		-- Or use a function for more flexibility, e.g. to disable slow treesitter highlight for large files
-		disable = function(lang, buf)
-			print(lang)
-			local max_filesize = 100 * 1024 -- 100 KB
-			local ok, stats = pcall(vim.loop.fs_stat, vim.api.nvim_buf_get_name(buf))
-			if ok and stats and stats.size > max_filesize then
-				return true
-			end
-		end,
-
 		-- Setting this to true will run `:h syntax` and tree-sitter at the same time.
 		-- Set this to `true` if you depend on 'syntax' being enabled (like for indentation).
 		-- Using this option may slow down your editor, and you may see some duplicate highlights.
@@ -140,5 +143,35 @@ lspconfig.sumneko_lua.setup {
 }
 
 
+require('fidget').setup()
+
+local cmp = require('cmp')
+local luasnip = require('luasnip')
+
+cmp.setup({
+	snippet = {
+		expand = function(args)
+			luasnip.lsp_expand(args.body)
+		end
+	},
+	mapping = cmp.mapping.preset.insert {
+		['<Tab>'] = cmp.mapping(function(fallback)
+			if cmp.visible() then
+				cmp.select_next_item()
+			elseif luasnip.expand_or_jumpable() then
+				luasnip.expand_or_jump()
+			else
+				fallback()
+			end
+		end, { 'i', 's' }),
+	},
+	sources = {
+		{ name = 'nvim_lsp' },
+		{ name = 'luasnip' }
+	}
+})
+
+
 -- KEYMAPS
 vim.keymap.set('n', '<leader>f', vim.lsp.buf.format)
+vim.keymap.set('n', '<leader>e', '<cmd>NvimTreeToggle<CR>')
